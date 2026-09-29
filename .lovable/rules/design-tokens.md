@@ -1,6 +1,6 @@
 # Design Tokens
 
-Token reference for **BONDZ EVENTS**. Use utility classes and CSS variables — never raw values.
+Token reference for **BONDZ EVENTS - DESIGN SYSTEM**. Use utility classes and CSS variables — never raw values.
 
 ## Colors
 

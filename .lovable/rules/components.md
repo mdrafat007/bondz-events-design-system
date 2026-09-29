@@ -1,11 +1,11 @@
 # Components
 
-Component catalog for **BONDZ EVENTS**. Import all components from `@ws-07ab635e13917e4edcc8/b05e6b12-3dde-49e9-ac29-9053c6b86cea`.
+Component catalog for **BONDZ EVENTS - DESIGN SYSTEM**. Import all components from `@ws-07ab635e13917e4edcc8/23ab21ef-81e4-4a7b-8a9d-23d038e76967`.
 
 ### AppShell
 
 ```ts
-import { AppShell } from "@ws-07ab635e13917e4edcc8/b05e6b12-3dde-49e9-ac29-9053c6b86cea"
+import { AppShell } from "@ws-07ab635e13917e4edcc8/23ab21ef-81e4-4a7b-8a9d-23d038e76967"
 ```
 
 **Props:**
@@ -20,7 +20,7 @@ import { AppShell } from "@ws-07ab635e13917e4edcc8/b05e6b12-3dde-49e9-ac29-9053c
 ### Badge
 
 ```ts
-import { Badge } from "@ws-07ab635e13917e4edcc8/b05e6b12-3dde-49e9-ac29-9053c6b86cea"
+import { Badge } from "@ws-07ab635e13917e4edcc8/23ab21ef-81e4-4a7b-8a9d-23d038e76967"
 ```
 
 **Props:**
@@ -33,7 +33,7 @@ import { Badge } from "@ws-07ab635e13917e4edcc8/b05e6b12-3dde-49e9-ac29-9053c6b8
 ### BrandLockup
 
 ```ts
-import { BrandLockup } from "@ws-07ab635e13917e4edcc8/b05e6b12-3dde-49e9-ac29-9053c6b86cea"
+import { BrandLockup } from "@ws-07ab635e13917e4edcc8/23ab21ef-81e4-4a7b-8a9d-23d038e76967"
 ```
 
 **Props:**
@@ -46,7 +46,7 @@ import { BrandLockup } from "@ws-07ab635e13917e4edcc8/b05e6b12-3dde-49e9-ac29-90
 ### Button
 
 ```ts
-import { Button } from "@ws-07ab635e13917e4edcc8/b05e6b12-3dde-49e9-ac29-9053c6b86cea"
+import { Button } from "@ws-07ab635e13917e4edcc8/23ab21ef-81e4-4a7b-8a9d-23d038e76967"
 ```
 
 **Props:**
@@ -59,7 +59,7 @@ import { Button } from "@ws-07ab635e13917e4edcc8/b05e6b12-3dde-49e9-ac29-9053c6b
 ### Card
 
 ```ts
-import { Card } from "@ws-07ab635e13917e4edcc8/b05e6b12-3dde-49e9-ac29-9053c6b86cea"
+import { Card } from "@ws-07ab635e13917e4edcc8/23ab21ef-81e4-4a7b-8a9d-23d038e76967"
 ```
 
 **Props:**
@@ -72,19 +72,19 @@ import { Card } from "@ws-07ab635e13917e4edcc8/b05e6b12-3dde-49e9-ac29-9053c6b86
 ### SiteFooter
 
 ```ts
-import { SiteFooter } from "@ws-07ab635e13917e4edcc8/b05e6b12-3dde-49e9-ac29-9053c6b86cea"
+import { SiteFooter } from "@ws-07ab635e13917e4edcc8/23ab21ef-81e4-4a7b-8a9d-23d038e76967"
 ```
 
 **Props:**
 
 | Prop | Type | Default |
 |---|---|---|
-| `variant` | standard · action | `standard` |
+| `variant` | standard · action | `—` |
 
 ### SiteNav
 
 ```ts
-import { SiteNav } from "@ws-07ab635e13917e4edcc8/b05e6b12-3dde-49e9-ac29-9053c6b86cea"
+import { SiteNav } from "@ws-07ab635e13917e4edcc8/23ab21ef-81e4-4a7b-8a9d-23d038e76967"
 ```
 
 **Props:**
@@ -99,12 +99,12 @@ import { SiteNav } from "@ws-07ab635e13917e4edcc8/b05e6b12-3dde-49e9-ac29-9053c6
 ### ThemeSoundToggle
 
 ```ts
-import { ThemeSoundToggle } from "@ws-07ab635e13917e4edcc8/b05e6b12-3dde-49e9-ac29-9053c6b86cea"
+import { ThemeSoundToggle } from "@ws-07ab635e13917e4edcc8/23ab21ef-81e4-4a7b-8a9d-23d038e76967"
 ```
 
 **Props:**
 
 | Prop | Type | Default |
 |---|---|---|
-| `variant` | pills · icons | `pills` |
+| `variant` | pills · icons | `—` |
 
