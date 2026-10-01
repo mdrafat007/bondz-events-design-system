@@ -1,10 +1,11 @@
 import { motion, useAnimationControls, type Variants } from "framer-motion";
 import { useEffect, useState, useRef, useCallback } from "react";
-import mascotWhite from "../../design-system/assets/icons/BONDZ_LOGO_ICON_DARK.png";
-import mascotRed from "../../design-system/assets/icons/BONDZ_LOGO_ICON_-_LIGHT.png";
+import mascotWhite from "../../design-system/assets/logos/mascot-white.png";
+import mascotRed from "../../design-system/assets/logos/mascot-red.png";
+import peekabooUrl from "../../design-system/assets/audio/peekaboo-sound.mp3";
 import { useTheme } from "../../design-system/lib/theme";
-import { playPeekabooSound, triggerTap } from "../../lib/haptics";
-import { cn } from "../../lib/utils";
+import { triggerTap, isSoundEnabled } from "../../design-system/lib/haptics";
+import { cn } from "../../design-system/lib/utils";
 
 export interface HeroBookingCTAProps {
   onClick?: () => void;
@@ -17,13 +18,14 @@ export function HeroBookingCTA({ onClick, className, disabled }: HeroBookingCTAP
   const mascotImg = theme === "dark" ? mascotWhite : mascotRed;
   const [isHovered, setIsHovered] = useState(false);
   const [isLooping, setIsLooping] = useState(false);
-  const [isMobile, setIsMobile] = useState(() => (typeof window !== "undefined" ? window.innerWidth < 640 : false));
+  // Measured after hydration so server and client render the same first frame.
+  const [isMobile, setIsMobile] = useState(false);
+
   const loopTimerRef = useRef<number | null>(null);
-  const launchTimerRef = useRef<number | null>(null);
+
   const buttonRef = useRef<HTMLDivElement>(null);
   const mountedRef = useRef(true);
   const isAnimatingRef = useRef(false);
-  const isLaunchingRef = useRef(false);
 
   const textControls = useAnimationControls();
   const arrowControls = useAnimationControls();
@@ -36,12 +38,14 @@ export function HeroBookingCTA({ onClick, className, disabled }: HeroBookingCTAP
     return () => {
       mountedRef.current = false;
       window.removeEventListener("resize", checkMobile);
-      if (launchTimerRef.current !== null) window.clearTimeout(launchTimerRef.current);
     };
   }, []);
 
-  const restY = isMobile ? 48 : 68;
-  const peekY = -15;
+  // Screen-calibrated peek and resting positions matching benchmark:
+  // Rest y: ONLY curly mascot hair tufts peek visibly above button rim (38 on mobile, 52 on desktop), hiding forehead & glasses
+  // Peek y: full mascot head pops up with glasses resting on rim
+  const restY = isMobile ? 38 : 52;
+  const peekY = isMobile ? -6 : -14;
 
   const mascotVariants: Variants = {
     resting: {
@@ -54,112 +58,141 @@ export function HeroBookingCTA({ onClick, className, disabled }: HeroBookingCTAP
     },
     hover: {
       y: peekY,
-      rotate: [0, 10, 10, 0],
+      rotate: [0, 8, 8, 0],
       transition: {
         y: { duration: 0.32, ease: [0.16, 1, 0.3, 1] },
         rotate: {
-          times: [0, 0.45, 0.75, 1],
-          duration: 0.48,
+          times: [0, 0.35, 0.7, 1],
+          duration: 0.45,
           ease: "easeInOut",
         },
       },
     },
     peekLoop: {
       y: [restY, peekY, peekY, restY],
-      rotate: [0, 10, 10, 0],
+      rotate: [0, 8, 8, 0],
       transition: {
         times: [0, 0.25, 0.75, 1],
         duration: 1.35,
-        ease: [0.16, 1, 0.3, 1],
+        ease: "easeInOut",
       },
     },
   };
 
+  // Push-jump physics:
+  // 1. Text punches rightward with a slight squash & spring
+  // 2. Transmits collision force directly into the arrow badge
+  // 3. Arrow jumps forward out of the button, then cleanly loops back behind the text
   const playPushJumpAnimation = useCallback(async () => {
     if (isAnimatingRef.current || !mountedRef.current) return;
     isAnimatingRef.current = true;
+
     try {
-      const btn = buttonRef.current;
-      const btnWidth = btn ? btn.offsetWidth : 280;
-      const mobile = window.innerWidth < 640;
-      const jumpDist = mobile ? Math.min(50, btnWidth * 0.22) : 96;
-      const travelDist = btn ? Math.max(140, btnWidth - 52) : 240;
+      const isSmall = window.innerWidth < 640;
+      const pushDist = isSmall ? 10 : 16;
+      const jumpDist = isSmall ? 36 : 56;
 
-      void textControls.start({
-        x: mobile ? [0, -3, 10, 1, 0] : [0, -5, 16, 2, 0],
-        transition: { times: [0, 0.16, 0.38, 0.75, 1], duration: 0.34, ease: "easeInOut" },
+      // 1. Text charges and punches to the right (striking impact)
+      await textControls.start({
+        x: [0, -3, pushDist, 0],
+        transition: {
+          times: [0, 0.2, 0.65, 1],
+          duration: 0.32,
+          ease: "easeInOut",
+        },
       });
 
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      // 2. Wait until the text strikes at peak rightward push
+      await new Promise((r) => setTimeout(r, 100));
       if (!mountedRef.current) return;
 
+      // 3. Arrow receives the collision force and JUMPS FORWARD out the right edge, smoothly fading out at exit
       await arrowControls.start({
-        x: [0, jumpDist],
-        scale: [1, 1.12],
-        transition: { duration: 0.16, ease: [0.16, 1, 0.3, 1] },
+        x: jumpDist,
+        opacity: [1, 0],
+        scale: [1, 1.1],
+        transition: {
+          duration: 0.18,
+          ease: "easeOut",
+        },
       });
       if (!mountedRef.current) return;
 
-      await arrowControls.start({ x: -travelDist, scale: 0.92, transition: { duration: 0.01 } });
+      // 4. Instantly set arrow behind the text while completely invisible (no 0.01s interpolation glitch)
+      arrowControls.set({
+        x: -jumpDist,
+        opacity: 0,
+        scale: 0.95,
+      });
+
+      // 5. Crisp pause at the rear
+      await new Promise((r) => setTimeout(r, 40));
       if (!mountedRef.current) return;
 
-      await new Promise((resolve) => setTimeout(resolve, 20));
-      if (!mountedRef.current) return;
-
+      // 6. Come back smoothly from the back of the text, fading in cleanly to rest slot
       await arrowControls.start({
         x: 0,
+        opacity: 1,
         scale: 1,
-        transition: { duration: 0.36, ease: [0.22, 1, 0.36, 1] },
+        transition: {
+          duration: 0.32,
+          ease: [0.22, 1, 0.36, 1],
+        },
       });
     } finally {
       isAnimatingRef.current = false;
     }
   }, [arrowControls, textControls]);
 
-  const clearLoop = useCallback(() => {
-    if (loopTimerRef.current !== null) {
-      window.clearTimeout(loopTimerRef.current);
-      loopTimerRef.current = null;
-    }
-    setIsLooping(false);
-  }, []);
-
+  // Automatic idle loop: Every 3.8 seconds, mascot peeks up and text/arrow executes push-jump loop
   useEffect(() => {
-    if (disabled || isHovered) return;
     const interval = window.setInterval(() => {
-      if (!mountedRef.current) return;
-      setIsLooping(true);
-      void playPushJumpAnimation();
-      if (loopTimerRef.current !== null) window.clearTimeout(loopTimerRef.current);
-      loopTimerRef.current = window.setTimeout(() => {
-        if (mountedRef.current) setIsLooping(false);
-        loopTimerRef.current = null;
-      }, 1700);
+      if (!isHovered && mountedRef.current) {
+        setIsLooping(true);
+        playPushJumpAnimation();
+        if (loopTimerRef.current) window.clearTimeout(loopTimerRef.current);
+        loopTimerRef.current = window.setTimeout(() => {
+          if (mountedRef.current) setIsLooping(false);
+        }, 1400);
+      }
     }, 3800);
 
     return () => {
       window.clearInterval(interval);
-      if (loopTimerRef.current !== null) window.clearTimeout(loopTimerRef.current);
+      if (loopTimerRef.current) window.clearTimeout(loopTimerRef.current);
     };
-  }, [isHovered, playPushJumpAnimation, disabled]);
+  }, [isHovered, playPushJumpAnimation]);
 
-  const handleEnter = () => {
-    clearLoop();
-    setIsHovered(true);
-    void playPushJumpAnimation();
-    playPeekabooSound();
+  const playPeekaboo = () => {
+    if (!isSoundEnabled()) return;
+    try {
+      const audio = new Audio(peekabooUrl);
+      audio.volume = 0.85;
+      audio.play().catch(() => {});
+    } catch {
+      /* audio optional */
+    }
   };
 
-  const handleLeave = () => setIsHovered(false);
+  const handleMouseEnter = () => {
+    if (disabled) return;
+    setIsHovered(true);
+    playPushJumpAnimation();
+    playPeekaboo();
+  };
+
+  const handleMouseLeave = () => {
+    setIsHovered(false);
+  };
 
   const handleTap = () => {
-    if (disabled || isLaunchingRef.current) return;
-    isLaunchingRef.current = true;
-    clearLoop();
+    if (disabled) return;
     setIsHovered(true);
     triggerTap();
-    void playPushJumpAnimation();
-    launchTimerRef.current = window.setTimeout(() => {
+    playPeekaboo();
+    playPushJumpAnimation();
+    // Allow snappy animation to play visibly before navigating
+    window.setTimeout(() => {
       if (mountedRef.current) onClick?.();
     }, 260);
   };
@@ -168,18 +201,33 @@ export function HeroBookingCTA({ onClick, className, disabled }: HeroBookingCTAP
 
   return (
     <div
-      className={cn("relative inline-flex max-w-full flex-col items-center justify-end overflow-visible select-none cursor-pointer group", className)}
-      onMouseEnter={handleEnter}
-      onMouseLeave={handleLeave}
-      onFocus={handleEnter}
-      onBlur={handleLeave}
+      className={cn(
+        "relative inline-flex flex-col items-center justify-end overflow-visible select-none cursor-pointer group",
+        disabled && "pointer-events-none opacity-70",
+        className,
+      )}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      onFocus={handleMouseEnter}
+      onBlur={handleMouseLeave}
       onTouchStart={handleTap}
       onClick={handleTap}
       role="button"
+      aria-disabled={disabled || undefined}
       tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          handleTap();
+        }
+      }}
       aria-label="Get started your booking with Mr. Bondz"
     >
-      {/* Layer 1: Mascot Head anchored behind button */}
+      {/* 
+        Layer 1 (Behind, z-index: 0): Mascot Head Illustration
+        Using bottom clipping [clip-path:inset(-400px_-100px_0px_-100px)] anchored at bottom: 0 
+        so NO chin or neck pixels can EVER peek below the bottom rim of the button!
+      */}
       <div
         className="pointer-events-none absolute inset-x-0 bottom-0 z-0 flex justify-center overflow-visible [clip-path:inset(-400px_-100px_0px_-100px)]"
         aria-hidden="true"
@@ -189,42 +237,59 @@ export function HeroBookingCTA({ onClick, className, disabled }: HeroBookingCTAP
           animate={animState}
           variants={mascotVariants}
           style={{ transformOrigin: "50% 85%" }}
-          className="flex origin-bottom items-center justify-center"
+          className="flex items-center justify-center origin-bottom"
         >
           <img
             src={mascotImg}
             alt="Mr. Bondz mascot"
-            draggable={false}
             className="w-24 xs:w-28 sm:w-38 md:w-44 h-auto max-w-none select-none object-contain drop-shadow-md"
+            draggable={false}
           />
         </motion.div>
       </div>
 
-      {/* Layer 2: Tactile Luxury Pill Button */}
+      {/* 
+        Layer 2 (Front, z-index: 10): Pill-shaped CTA Button
+        Tactile realistic luxury finish: inner highlight, bevel depth, subtle gradient, and ring
+      */}
       <motion.div
         ref={buttonRef}
+        style={{ transform: "translateZ(0)", WebkitMaskImage: "-webkit-radial-gradient(white, black)" }}
+        className="relative z-10 flex max-w-full items-center justify-between gap-2 xs:gap-3 sm:gap-5 rounded-full bg-gradient-to-b from-[#f55248] via-[#ee4339] to-[#de3429] px-3.5 xs:px-5 sm:px-8 md:px-10 py-2.5 xs:py-3 sm:py-4 md:py-5 shadow-[inset_0_1.5px_1px_rgba(255,255,255,0.45),inset_0_-2px_4px_rgba(0,0,0,0.18),0_12px_32px_rgba(241,69,59,0.36)] ring-1 ring-white/20 ring-inset overflow-hidden isolate"
         animate={isHovered ? { scale: 1.02 } : isLooping ? { scale: 1.015 } : { scale: 1 }}
         whileTap={{ scale: 0.97 }}
         transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-        className="bondz-hero-cta relative z-10 flex min-h-14 max-w-full items-center justify-between gap-3 sm:gap-6 rounded-full bg-gradient-to-b from-[#f55248] via-[#ee4339] to-[#de3429] px-6 sm:px-9 py-3.5 sm:py-4.5 shadow-[inset_0_1.5px_1px_rgba(255,255,255,0.45),inset_0_-2px_4px_rgba(0,0,0,0.18),0_12px_32px_rgba(241,69,59,0.36)] ring-1 ring-white/20 ring-inset overflow-hidden"
       >
+        {/* Animated Text: Delivers the side push into the arrow badge */}
         <motion.span
           animate={textControls}
-          className="whitespace-nowrap font-sans text-xs sm:text-sm md:text-base font-black tracking-wider uppercase text-white"
+          initial={{ x: 0 }}
+          className="relative z-20 font-display text-[clamp(0.68rem,2.8vw,1.20rem)] font-black uppercase tracking-wide text-white whitespace-nowrap [font-variation-settings:'wdth'_85] drop-shadow-[0_1.5px_2px_rgba(0,0,0,0.45)] pointer-events-none"
         >
           GET STARTED YOUR BOOKING
         </motion.span>
+
+        {/* Right Icon Accent: Tactile circular white badge pill with bold prominent arrow */}
         <motion.span
           animate={arrowControls}
-          aria-hidden="true"
-          className="grid size-8 sm:size-9 md:size-10 shrink-0 place-items-center rounded-full bg-white shadow-md text-primary font-black"
+          initial={{ x: 0, scale: 1 }}
+          className="relative z-10 flex size-7.5 xs:size-9 sm:size-11 md:size-12.5 shrink-0 items-center justify-center rounded-full bg-gradient-to-b from-white to-[#fbf8f5] text-[#f1453b] shadow-[0_3px_10px_rgba(0,0,0,0.22),inset_0_1.5px_1px_rgba(255,255,255,0.95)] ring-1 ring-black/10 pointer-events-none"
         >
-          <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" className="size-4 sm:size-5">
-            <path d="M4 10h12M11 5l5 5-5 5" stroke="#f1453b" strokeWidth="3.6" strokeLinecap="round" strokeLinejoin="round" />
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="3.6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="size-4 xs:size-5 sm:size-6.5 md:size-7 text-[#f1453b] drop-shadow-xs transition-transform group-hover:translate-x-0.5"
+            aria-hidden="true"
+          >
+            <line x1="3.5" y1="12" x2="20.5" y2="12" />
+            <polyline points="13.5 5 20.5 12 13.5 19" />
           </svg>
         </motion.span>
       </motion.div>
     </div>
   );
 }
-

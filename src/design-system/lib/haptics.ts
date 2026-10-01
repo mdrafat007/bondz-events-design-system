@@ -1,6 +1,7 @@
 import peekabooAsset from "../assets/audio/peekaboo-sound.mp3";
 import cheersAsset from "../assets/audio/BONDZ_EVENTS-CHEERS_AUDIO.mp3";
 import { isSoundEnabled } from "./sound-state";
+export { isSoundEnabled } from "./sound-state";
 
 let audioContext: AudioContext | undefined;
 function getContext() {

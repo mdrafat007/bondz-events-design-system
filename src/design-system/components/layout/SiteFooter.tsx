@@ -8,19 +8,34 @@ export const SiteFooter = forwardRef<HTMLElement, SiteFooterProps>(function Site
 
   return (
     <>
-      <footer ref={ref} className={cn("flex h-8 shrink-0 items-center justify-between gap-4 px-4 text-ink/55 md:px-8 bg-transparent", className)} {...props}>
+      <footer
+        ref={ref}
+        className={cn(
+          "grid shrink-0 grid-cols-[minmax(0,1fr)_auto] lg:grid-cols-[1fr_auto_1fr] items-center gap-x-3 border-t border-hairline/60 bg-canvas px-4 py-1.5 text-ink/55 transition-colors duration-300 md:px-8",
+          className,
+        )}
+        {...props}
+      >
         {children ?? (
           <>
             <span className="font-mono text-[0.66rem] font-semibold uppercase tracking-[0.16em] text-ink/55 truncate">
-              © 2026 BONDZ EVENTS - BY MR. BONDZ
+              © 2026 BONDZ EVENTS<span className="hidden sm:inline"> · BY MR. BONDZ</span>
             </span>
-            <button
-              type="button"
-              onClick={() => setOpen(true)}
-              className="font-mono text-[0.66rem] font-semibold uppercase tracking-[0.16em] text-ink/55 hover:text-ink underline-offset-4 hover:underline cursor-pointer transition-colors whitespace-nowrap"
-            >
-              CANCELLATION & RESCHEDULING POLICY
-            </button>
+
+            {/* Desktop-only centered signature tagline */}
+            <span className="hidden lg:block font-serif italic text-center text-xs tracking-wide text-ink/75 select-none">
+              Good times, beautifully made<span className="text-primary font-bold">.</span>
+            </span>
+
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => setOpen(true)}
+                className="font-mono text-[0.66rem] font-semibold uppercase tracking-[0.16em] text-ink/55 hover:text-ink underline-offset-4 hover:underline cursor-pointer transition-colors whitespace-nowrap"
+              >
+                CANCELLATION<span className="hidden sm:inline"> &amp; RESCHEDULING</span>
+              </button>
+            </div>
           </>
         )}
       </footer>
